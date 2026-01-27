@@ -83,6 +83,7 @@ Disassembly view of the main function using `objdump` :
     159d:       bf 08 00 00 00          mov    $0x8,%edi
     15a2:       e8 49 fd ff ff          call   12f0 <exit@plt>
 ```
+i am sorry for the at&t syntax : (
 
 As we can see there is a multitude of levels each one characterized by a function.
 # First level
@@ -105,5 +106,282 @@ Congratulations! You've defused the bomb!
 Well...
 ```
 
-I suspected the string : (I am just a renegade hockey mom.), and it is the first password.
+I suspected the string : ( I am just a renegade hockey mom. ), and it is the first password.
 # Second level
+from a high view we can see :
+```
+   0x00000000000015cb <+0>:     endbr64
+   0x00000000000015cf <+4>:     push   rbp
+   0x00000000000015d0 <+5>:     push   rbx
+   0x00000000000015d1 <+6>:     sub    rsp,0x28
+   0x00000000000015d5 <+10>:    mov    rax,QWORD PTR fs:0x28
+   0x00000000000015de <+19>:    mov    QWORD PTR [rsp+0x18],rax
+   0x00000000000015e3 <+24>:    xor    eax,eax
+   0x00000000000015e5 <+26>:    mov    rsi,rsp
+   0x00000000000015e8 <+29>:    call   0x1c11 <read_six_numbers>
+   0x00000000000015ed <+34>:    cmp    DWORD PTR [rsp],0x1
+   0x00000000000015f1 <+38>:    jne    0x15fd <phase_2+50>
+   0x00000000000015f3 <+40>:    mov    rbx,rsp
+   0x00000000000015f6 <+43>:    lea    rbp,[rsp+0x14]
+   0x00000000000015fb <+48>:    jmp    0x1612 <phase_2+71>
+   0x00000000000015fd <+50>:    call   0x1be5 <explode_bomb>
+   0x0000000000001602 <+55>:    jmp    0x15f3 <phase_2+40>
+   0x0000000000001604 <+57>:    call   0x1be5 <explode_bomb>
+   0x0000000000001609 <+62>:    add    rbx,0x4
+   0x000000000000160d <+66>:    cmp    rbx,rbp
+   0x0000000000001610 <+69>:    je     0x161d <phase_2+82>
+   0x0000000000001612 <+71>:    mov    eax,DWORD PTR [rbx]
+   0x0000000000001614 <+73>:    add    eax,eax
+   0x0000000000001616 <+75>:    cmp    DWORD PTR [rbx+0x4],eax
+   0x0000000000001619 <+78>:    je     0x1609 <phase_2+62>
+   0x000000000000161b <+80>:    jmp    0x1604 <phase_2+57>
+   0x000000000000161d <+82>:    mov    rax,QWORD PTR [rsp+0x18]
+   0x0000000000001622 <+87>:    xor    rax,QWORD PTR fs:0x28
+   0x000000000000162b <+96>:    jne    0x1634 <phase_2+105>
+   0x000000000000162d <+98>:    add    rsp,0x28
+   0x0000000000001631 <+102>:   pop    rbx
+   0x0000000000001632 <+103>:   pop    rbp
+   0x0000000000001633 <+104>:   ret
+   0x0000000000001634 <+105>:   call   0x1220 <__stack_chk_fail@plt>
+
+```
+
+we can see:
+- takes six separated digits as arguments by the function read six numbers.
+
+we will give it 6 argument and see what it do with it.
+arguments : 1 2 3 4 5 6
+and break at the instruction after read six numbers function.
+
+```
+4: x/40xg $rsp
+0x7fffffffdc30: 0x0000000200000001      0x0000000400000003
+0x7fffffffdc40: 0x0000000600000005      0xca9b237595421500
+```
+
+we can see from the stack our 6 digits displayed with 32 bit chunks.
+
+from there we can understand the logic after this function, it checks for the first digit i entered if it is equal to 1 if not explode bomb, then a move of the address of RSP to RBX.
+
+```
+   0x00000000000015f3 <+40>:    mov    rbx,rsp
+   0x00000000000015f6 <+43>:    lea    rbp,[rsp+0x14]
+   0x00000000000015fb <+48>:    jmp    0x1612 <phase_2+71>
+```
+
+and the load effective address after looking a the code loads the last digit to RBP so it acts like a stop of the loop that is coming up:
+
+```
+   0x0000000000001609 <+62>:    add    rbx,0x4
+   0x000000000000160d <+66>:    cmp    rbx,rbp
+   0x0000000000001610 <+69>:    je     0x161d <phase_2+82>
+   
+   0x0000000000001612 <+71>:    mov    eax,DWORD PTR [rbx]
+   0x0000000000001614 <+73>:    add    eax,eax
+   0x0000000000001616 <+75>:    cmp    DWORD PTR [rbx+0x4],eax
+   0x0000000000001619 <+78>:    je     0x1609 <phase_2+62>
+   0x000000000000161b <+80>:    jmp    0x1604 <phase_2+57>
+```
+
+the loop in a high level language could look like this :
+```
+if dword[rsp] = 1 then continue
+	else explode
+
+rbx = rsp
+rbp = rsp + 0x14
+jump testing
+
+loop:
+	rbx = rbx + 4
+	if rbx = rbp then exit the function good job
+		else continue
+
+testing:
+	eax = [rbx]
+	eax = eax x 2
+	if [rbx + 0x4] = eax then go to loop
+		else explode bomb
+```
+
+from there we could guess the password. it always take the digit before double it and check the double with the next number.
+
+correct input:
+```
+1 2 4 8 16 32
+```
+# Phase 3
+phase 3:
+```
+Dump of assembler code for function phase_3:
+   0x0000555555555639 <+0>:     endbr64
+   0x000055555555563d <+4>:     sub    rsp,0x18
+   0x0000555555555641 <+8>:     mov    rax,QWORD PTR fs:0x28
+   0x000055555555564a <+17>:    mov    QWORD PTR [rsp+0x8],rax
+   0x000055555555564f <+22>:    xor    eax,eax
+   0x0000555555555651 <+24>:    lea    rcx,[rsp+0x4]
+   0x0000555555555656 <+29>:    mov    rdx,rsp
+   0x0000555555555659 <+32>:    lea    rsi,[rip+0x1caf]        # 0x55555555730f
+   0x0000555555555660 <+39>:    call   0x5555555552c0 <__isoc99_sscanf@plt>
+   0x0000555555555665 <+44>:    cmp    eax,0x1
+   0x0000555555555668 <+47>:    jle    0x555555555688 <phase_3+79>
+   0x000055555555566a <+49>:    cmp    DWORD PTR [rsp],0x7
+   0x000055555555566e <+53>:    ja     0x555555555704 <phase_3+203>
+   0x0000555555555674 <+59>:    mov    eax,DWORD PTR [rsp]
+   0x0000555555555677 <+62>:    lea    rdx,[rip+0x1b22]        # 0x5555555571a0
+   0x000055555555567e <+69>:    movsxd rax,DWORD PTR [rdx+rax*4]
+   0x0000555555555682 <+73>:    add    rax,rdx
+   0x0000555555555685 <+76>:    notrack jmp rax
+   0x0000555555555688 <+79>:    call   0x555555555be5 <explode_bomb>
+   0x000055555555568d <+84>:    jmp    0x55555555566a <phase_3+49>
+   0x000055555555568f <+86>:    mov    eax,0x274
+   0x0000555555555694 <+91>:    sub    eax,0x24c
+   0x0000555555555699 <+96>:    add    eax,0x2b0
+   0x000055555555569e <+101>:   sub    eax,0x7e
+   0x00005555555556a1 <+104>:   add    eax,0x7e
+   0x00005555555556a4 <+107>:   sub    eax,0x7e
+   0x00005555555556a7 <+110>:   add    eax,0x7e
+   0x00005555555556aa <+113>:   sub    eax,0x7e
+   0x00005555555556ad <+116>:   cmp    DWORD PTR [rsp],0x5
+   0x00005555555556b1 <+120>:   jg     0x5555555556b9 <phase_3+128>
+   0x00005555555556b3 <+122>:   cmp    DWORD PTR [rsp+0x4],eax
+   0x00005555555556b7 <+126>:   je     0x5555555556be <phase_3+133>
+   0x00005555555556b9 <+128>:   call   0x555555555be5 <explode_bomb>
+   0x00005555555556be <+133>:   mov    rax,QWORD PTR [rsp+0x8]
+   0x00005555555556c3 <+138>:   xor    rax,QWORD PTR fs:0x28
+   0x00005555555556cc <+147>:   jne    0x555555555710 <phase_3+215>
+   0x00005555555556ce <+149>:   add    rsp,0x18
+   0x00005555555556d2 <+153>:   ret
+   0x00005555555556d3 <+154>:   mov    eax,0x0
+   0x00005555555556d8 <+159>:   jmp    0x555555555694 <phase_3+91>
+   0x00005555555556da <+161>:   mov    eax,0x0
+   0x00005555555556df <+166>:   jmp    0x555555555699 <phase_3+96>
+   0x00005555555556e1 <+168>:   mov    eax,0x0
+   0x00005555555556e6 <+173>:   jmp    0x55555555569e <phase_3+101>
+   0x00005555555556e8 <+175>:   mov    eax,0x0
+   0x00005555555556ed <+180>:   jmp    0x5555555556a1 <phase_3+104>
+   0x00005555555556ef <+182>:   mov    eax,0x0
+   0x00005555555556f4 <+187>:   jmp    0x5555555556a4 <phase_3+107>
+   0x00005555555556f6 <+189>:   mov    eax,0x0
+   0x00005555555556fb <+194>:   jmp    0x5555555556a7 <phase_3+110>
+   0x00005555555556fd <+196>:   mov    eax,0x0
+   0x0000555555555702 <+201>:   jmp    0x5555555556aa <phase_3+113>
+   0x0000555555555704 <+203>:   call   0x555555555be5 <explode_bomb>
+   0x0000555555555709 <+208>:   mov    eax,0x0
+   0x000055555555570e <+213>:   jmp    0x5555555556ad <phase_3+116>
+   0x0000555555555710 <+215>:   call   0x555555555220 <__stack_chk_fail@plt>
+```
+
+at first glance it first encounters a scan function then succeeded with 2 comparison the first with RAX then with whats inside a dword of the address of RSP. I also see that it is composed of two part.
+
+after the fonction:
+RAX takes the number of digits inside the input.
+The inputs get saved into the stack as Dwords.
+
+then an address is calculated and jumped into then comparison against values are done.
+
+pseudo high level code :
+```
+input = scan
+if digits in input <= 1 explode
+	else continue
+
+if digit[1] > 7 or > 5 explode
+	else continue
+
+rax = dword[0x5555555571a0 + digit[1] * 4]
+rax = 0x5555555571a0 + rax
+jump rax
+
+switch (rax)
+	(0x00005555555556d3)
+		digit 2 == -0x24c + 0x2b0 - 0x7e or explode
+
+	(0x00005555555556da)
+		digit 2 == 0x2b0 - 0x7e or explode
+
+	(0x00005555555556e1) or (0x00005555555556ef) or (0x00005555555556fd)
+		digit 2 == -0x7e or explode
+
+	(0x00005555555556e8) or (0x00005555555556f6) or (0x0000555555555709)
+		digit 2 == 0 or explode
+
+	(0x0000555555555704)
+		explode
+```
+
+this is from this part of the code:
+```
+ 0x0000555555555660 <+39>:    call   0x5555555552c0 <__isoc99_sscanf@plt>
+
+   0x0000555555555665 <+44>:    cmp    eax,0x1
+   0x0000555555555668 <+47>:    jle    explode_bomb
+
+   0x000055555555566a <+49>:    cmp    DWORD PTR [rsp],0x7
+   0x000055555555566e <+53>:    ja     explode_bomb
+
+   0x0000555555555674 <+59>:    mov    eax,DWORD PTR [rsp]
+   0x0000555555555677 <+62>:    lea    rdx,[rip+0x1b22]        # 0x5555555571a0
+   0x000055555555567e <+69>:    movsxd rax,DWORD PTR [rdx+rax*4]
+   0x0000555555555682 <+73>:    add    rax,rdx
+   0x0000555555555685 <+76>:    notrack jmp rax
+   0x0000555555555688 <+79>:    call   explode_bomb
+
+
+   0x0000555555555694 <+91>:    sub    eax,0x24c
+   0x0000555555555699 <+96>:    add    eax,0x2b0
+
+   0x000055555555569e <+101>:   sub    eax,0x7e
+   0x00005555555556a1 <+104>:   add    eax,0x7e
+
+   0x00005555555556a4 <+107>:   sub    eax,0x7e
+   0x00005555555556a7 <+110>:   add    eax,0x7e
+
+   0x00005555555556aa <+113>:   sub    eax,0x7e
+   0x00005555555556ad <+116>:   cmp    DWORD PTR [rsp],0x5
+   0x00005555555556b1 <+120>:   jg     0x5555555556b9 <phase_3+128>
+
+   0x00005555555556b3 <+122>:   cmp    DWORD PTR [rsp+0x4],eax
+   0x00005555555556b7 <+126>:   je     0x5555555556be <phase_3+133>
+   0x00005555555556b9 <+128>:   call   0x555555555be5 <explode_bomb>
+   0x00005555555556be <+133>:   mov    rax,QWORD PTR [rsp+0x8]
+   0x00005555555556c3 <+138>:   xor    rax,QWORD PTR fs:0x28
+   0x00005555555556cc <+147>:   jne    0x555555555710 <phase_3+215>
+   0x00005555555556ce <+149>:   add    rsp,0x18
+   0x00005555555556d2 <+153>:   ret
+
+
+   0x00005555555556d3 <+154>:   mov    eax,0x0
+   0x00005555555556d8 <+159>:   jmp    0x555555555694 <phase_3+91>
+   0x00005555555556da <+161>:   mov    eax,0x0
+   0x00005555555556df <+166>:   jmp    0x555555555699 <phase_3+96>
+   0x00005555555556e1 <+168>:   mov    eax,0x0
+   0x00005555555556e6 <+173>:   jmp    0x55555555569e <phase_3+101>
+   0x00005555555556e8 <+175>:   mov    eax,0x0
+   0x00005555555556ed <+180>:   jmp    0x5555555556a1 <phase_3+104>
+   0x00005555555556ef <+182>:   mov    eax,0x0
+   0x00005555555556f4 <+187>:   jmp    0x5555555556a4 <phase_3+107>
+   0x00005555555556f6 <+189>:   mov    eax,0x0
+   0x00005555555556fb <+194>:   jmp    0x5555555556a7 <phase_3+110>
+   0x00005555555556fd <+196>:   mov    eax,0x0
+   0x0000555555555702 <+201>:   jmp    0x5555555556aa <phase_3+113>
+   0x0000555555555704 <+203>:   call   0x555555555be5 <explode_bomb>
+   0x0000555555555709 <+208>:   mov    eax,0x0
+   0x000055555555570e <+213>:   jmp    0x5555555556ad <phase_3+116>
+   0x0000555555555710 <+215>:   call   0x555555555220 <__stack_chk_fail@plt>
+```
+
+now we need to find a value of the first digit that has to be :
+- digit[1] <= 5
+-  digit[1] * 4 + 0x5555555571a0 = X
+
+in sort of when we jump to a known X the digit[2] is equal to the succession of operations before arriving to the comparison.
+
+for this we have to calculate an address then set digit[1] and digit[2] accordingly as the pseudo code says.
+
+lets say that we want to jump to the address X
+then according to this equation we can get the according digit[1] value to the address and set digit[2] according to the address as well:
+```
+digit[1] = (X - 0x5555555571a0) / 4
+```
+
