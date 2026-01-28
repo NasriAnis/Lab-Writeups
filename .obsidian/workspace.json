@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "Reverse Engineering/Bomb lab x86/Bomb lab resolution.md",
+                "file": "Hack The Box/PenTest/Social-Engineering/Phishing - Merry Clickmas.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Bomb lab resolution"
+              "title": "Phishing - Merry Clickmas"
             }
           }
         ]
@@ -78,8 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "right": {
     "id": "a1e10898d7e7ce53",
@@ -183,6 +182,7 @@
   },
   "active": "bf1959a6c12e6d37",
   "lastOpenFiles": [
+    "Reverse Engineering/Bomb lab x86/Bomb lab resolution.md",
     "Reverse Engineering/Bomb lab x86/files/a.txt",
     "Reverse Engineering/Bomb lab x86/files/gdb.config",
     "Reverse Engineering/Bomb lab x86/files/bomb",
@@ -196,7 +196,6 @@
     "Hack The Box/PenTest/Social-Engineering/attachments/Pasted image 20260126220557.png",
     "Hack The Box/PenTest/Social-Engineering/attachments/Pasted image 20260126220408.png",
     "Hack The Box/PenTest/Social-Engineering/attachments",
-    "Reverse Engineering/Bomb lab x86/Bomb lab resolution.md",
     "Hack The Box/PenTest/Social-Engineering",
     "Hack The Box/PenTest",
     "Reverse Engineering/Bomb lab x86/Pasted image 20260125123316.png"
